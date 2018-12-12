@@ -22,11 +22,16 @@ This step takes the Spring Boot application and creates a Docker image.
 
 # 03-docker-compose
 
+- introduce postgres db instead of using h2
+- `sudo docker-compose -f docker-compose.yml up`
+
 # 04-k8s
 
 # 05-helm
 
 - https://github.com/helm/charts/tree/master/stable/postgresql
+
+06-helm parent chart
 
 # Available Endpoints on the app include: 
 

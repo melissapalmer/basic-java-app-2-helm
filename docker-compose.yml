@@ -1,0 +1,31 @@
+version: '3.1'
+
+volumes:
+  init.sql: 
+  restore-db.sh:    
+  data:
+  postgres_data:
+    driver: local
+
+services:
+  db:
+    image: postgres:9.6.9
+    volumes:
+    - postgres_data:/var/lib/postgresql/data #ensure you data is saved between container shutdown/startup
+    - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql #run SQL on postgres startup
+    ports:
+    - "5433:5432"
+    environment:
+    - POSTGRES_PASSWORD=example
+    
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+    - 8081:8080
+    
+  docker2helm:
+    image: melissapalmer/docker2helm
+    restart: always
+    ports:
+    - 8080:8080
