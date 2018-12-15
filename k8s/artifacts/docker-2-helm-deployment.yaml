@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-2-helm
+  labels:
+    name: docker-2-helm
+    deployment: docker-2-helm
+    app: docker-2-helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docker-2-helm
+  template:
+    metadata:
+      name: docker-2-helm
+      labels:
+        app: docker-2-helm
+        name: docker-2-helm
+        deployment: docker-2-helm
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: docker-2-helm
+        image: melissapalmer/docker2helm:latest
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 8080
+            protocol: TCP
+        volumeMounts:
+        - name: configuration-volume
+          # Note: 'app.jar' currently resides within the root folder.
+          mountPath: /config
+      i#magePullSecrets:
+      #- name: baobab-artifactory-registry
+      volumes:
+      - name: configuration-volume
+        configMap:
+          name: docker-2-helm-configuration

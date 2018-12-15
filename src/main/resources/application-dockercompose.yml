@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:~/docker-2-helm;AUTO_SERVER=TRUE
+    initialization-mode: always
+  jpa:
+    show-sql: true
+    generate-ddl: true
+    hibernate.ddl-auto: create-drop

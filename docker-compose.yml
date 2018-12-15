@@ -1,0 +1,38 @@
+version: '3.1'
+
+volumes:
+  init.sql: 
+  data:
+  postgres_data:
+    driver: local
+  application-container.yml: 
+
+services:
+  db:
+    image: postgres:9.6.9
+    volumes:
+    - postgres_data:/var/lib/postgresql/data #ensure you data is saved between container shutdown/startup
+    - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql #run SQL on postgres startup
+    ports:
+    - "5433:5432"
+    environment:
+    - POSTGRES_PASSWORD=example
+    - POSTGRES_DB=db
+    
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+    - 8081:8080
+    
+  docker2helm:
+    image: melissapalmer/docker2helm
+    volumes:
+    - ./application-container.yml:/config/application.yml
+    restart: always
+    ports:
+    - 8080:8080
+    links:
+      - db
+    depends_on:
+      - db

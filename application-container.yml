@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/db
+    username: postgres
+    password: example
+    platform: postgresql
+  jpa:
+    show-sql: true
+    generate-ddl: false
+    hibernate.ddl-auto: validate
+    
+    
+#    
+#spring.datasource.url= jdbc:postgresql://localhost:5432/springbootdb 
+#spring.datasource.username=postgres 
+#spring.datasource.password=postgres@123   
+#spring.jpa.hibernate.ddl-auto=create-drop
