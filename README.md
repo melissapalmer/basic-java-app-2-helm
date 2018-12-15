@@ -3,6 +3,10 @@ Basic hello world rest api with /hello which queries a DB for greetings
 
 # 01-springboot-rest-api
 
+**Prerequisites**
+
+- Java
+
 This step creates a basic Spring Boot Restful API. Uses Maven to create the build artifact (jar) which we can then run and validate a couple of endpoints. 
 
 - Build Using `./mvnw clean package`
@@ -10,6 +14,10 @@ This step creates a basic Spring Boot Restful API. Uses Maven to create the buil
 - Run `java -jar target/docker-2-helm.jar` or `./mvnw spring-boot:run`
 
 # **02-springboot-2-docker**
+
+**Prerequisites**
+
+- Docker
 
 This step takes the Spring Boot application and creates a Docker image. 
 
@@ -22,12 +30,17 @@ This step takes the Spring Boot application and creates a Docker image.
 
 # 03-docker-compose
 
+**Prerequisites**
+
+- Docker, Docker Compose
+
 - introduce postgres db instead of using h2
 - `sudo docker-compose -f docker-compose.yml up`
+  - make sure you have build your own image before running the above ie: `docker build -t melissapalmer/docker2helm:latest .`
 
-# 04-k8s
+sudo docker system prune --volumes
 
-# 05-helm
+# 04-helm
 
 - https://github.com/helm/charts/tree/master/stable/postgresql
 

@@ -2,10 +2,10 @@ version: '3.1'
 
 volumes:
   init.sql: 
-  restore-db.sh:    
   data:
   postgres_data:
     driver: local
+  application-container.yml: 
 
 services:
   db:
@@ -17,6 +17,7 @@ services:
     - "5433:5432"
     environment:
     - POSTGRES_PASSWORD=example
+    - POSTGRES_DB=db
     
   adminer:
     image: adminer
@@ -26,6 +27,12 @@ services:
     
   docker2helm:
     image: melissapalmer/docker2helm
+    volumes:
+    - ./application-container.yml:/config/application.yml
     restart: always
     ports:
     - 8080:8080
+    links:
+      - db
+    depends_on:
+      - db

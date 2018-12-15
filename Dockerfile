@@ -1,7 +1,7 @@
 FROM maven:3.5.3-jdk-8-alpine as BUILD
 WORKDIR /build
 COPY pom.xml .
-RUN mvn dependency:go-offline
+#RUN mvn dependency:go-offline
 
 # Step : Build & Unit Test
 COPY src/ /build/src/
