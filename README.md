@@ -34,7 +34,8 @@ This step takes the Spring Boot application and creates a Docker image.
 
 - Docker, Docker Compose
 
-- introduce postgres db instead of using h2
+Introduce postgres db instead of using h2
+
 - `sudo docker-compose -f docker-compose.yml up`
   - make sure you have build your own image before running the above ie: `docker build -t melissapalmer/docker2helm:latest .`
 
@@ -42,7 +43,30 @@ sudo docker system prune --volumes
 
 # 04-helm
 
+**Prerequisites**
+
+- minikube, helm
+
+Steps
+
+- ```
+  helm init
+  ```
+
+- `helm create docker-2-helm`
+
+  - customise the chart to include configuration.yrml and .. add volumn to deployment
+
+- helm install --name docker-2-helm ./helm-chart/docker-2-helm
+
+- hosts file entry
+
 - https://github.com/helm/charts/tree/master/stable/postgresql
+
+- `watch kubectl get pods`
+- `watch kubectl get ingresses`
+- `watch kubectl get services`
+- `watch kubectl get pvc`
 
 06-helm parent chart
 
