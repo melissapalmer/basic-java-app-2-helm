@@ -26,6 +26,9 @@ services:
     - 8081:8080
     
   docker2helm:
+    build:
+      context: ./
+      dockerfile: Dockerfile
     image: melissapalmer/docker2helm
     volumes:
     - ./application-container.yml:/config/application.yml

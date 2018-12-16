@@ -58,6 +58,11 @@ Create a Dockerfile, as below, in your project. This is used to define an image,
 FROM maven:3.5.3-jdk-8-alpine as BUILD
 WORKDIR /build
 COPY pom.xml .
+# get all the downloads out of the way
+# mvn <maven-plugin-name>:help caches maven specific dependencies to image
+# mvn dependency:go-offline caches build depencencies to image
+RUN mvn clean
+RUN mvn compiler:help jar:help resources:help surefire:help clean:help install:help deploy:help site:help dependency:help javadoc:help spring-boot:help
 RUN mvn dependency:go-offline
 COPY src/ /build/src/
 RUN mvn package
@@ -79,6 +84,9 @@ In this case there are two FROM instructions. This means this is a two-stage bui
 - `FROM` command tells docker which base image to start building your own image off
   - You therefore get all the installs from the base layer image)
 - The `maven:3.5.3-jdk-8-alpine` stage is the base image for the first build, it is named BUILD. And is used to build a fat jar for the application. 
+  - the other advantage of the multi-stage build is that if nothing has changed for a stage, it won't be generated again. 
+  - i.e.: if you pom.xml has not changed this step will not run again and therefore the maven dependencies wont be downloaded over and over. 
+- The `RUN` commands  get the maven dependencies downloaded to the docker image
 - The second`FROM openjdk:8-jre-alpine` is the final base image for the build. The jar file generated in the first stage is copied to this stage using `COPY --from=BUILD`
 - `EXPOSE` instruction tells Docker port 8080 port can be exposed outside the container.
 - `COPY --from=BUILD` copies the jar from previous BUILD image layer to app.jar on our final image. 
@@ -99,18 +107,84 @@ In this case there are two FROM instructions. This means this is a two-stage bui
 
 Again go to http://localhost:8080/hello to see a hello message, note that the IP address will be different. This is because it is now coming from an application deployed inside a docker container. (Each container gets its own, new IP assigned inside the Docker network.)
 
-# 03-docker-compose
+**AT THIS POINT: .... We have a Spring Boot app running in a Docker container.** NOTE: the differences from the previous step:
+
+- We used Docker (and not your own machine) to build the application jar (ie: stage one of our multi-stage Dockerfile)
+- We ran the container using docker commands
+- Handing this over to OP's would require they have Docker and know the docker commands. We have specified the dependencies to build and run our application in the Dockerfile
+
+# 03-Running our app with linked DB (using Docker Compose)
+
+Docker Compose is a tool to run multiple containers, define how they are connected, how many instances should be deployed, etc. In this scenario we want to replace the in memory DB, with a working postgresql DB (another container). 
 
 ## Prerequisites
 
-**Docker Compose:** 1.17.1		Install Instructions: `sudo apt  install docker-compose`
+**Docker Compose:** 1.17.1		Install Instructions: `sudo apt install docker-compose`
 
 - Docker
 
-Introduce postgres db instead of using h2
+Create a  `docker-compose.yml` as below:
+
+```
+version: '3.1'
+
+volumes:
+  init.sql: 
+  data:
+  postgres_data:
+    driver: local
+  application-container.yml: 
+
+services:
+  db:
+    image: postgres:9.6.9
+    volumes:
+    - postgres_data:/var/lib/postgresql/data 
+    - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+    - "5433:5432"
+    environment:
+    - POSTGRES_PASSWORD=example
+    - POSTGRES_DB=db
+    
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+    - 8081:8080
+    
+  docker2helm:
+    image: melissapalmer/docker2helm
+    volumes:
+    - ./application-container.yml:/config/application.yml
+    restart: always
+    ports:
+    - 8080:8080
+    links:
+      - db
+    depends_on:
+      - db
+```
+
+**Describe docker-compose.yml file**
+
+- in this file we have described 3 services: docker2helm (our app), db (the postgres DB for our our), adminer (is a DB management tool, helps us to easily login and see the DB)
+- the **db** service is marked as a `postgres:9.6.9` we set the password via environment variables
+  - and pass in an initialisation script (init.sql) 
+  - remember in the previous step we used Spring to initialise the DB using `data-h2.sql` file and `spring.datasource.platform=h2` setting
+- for the **docker2helm** service (which is our spring app as a docker image)
+  - we overwrite the application.yml by copying over ./application-container.yml to /config/application.yml in this we have the `spring.datasource.platform=postges` it'll therefore ignore the data-h2.sql file
+  - we could have done this with Spring profiles, but I wanted to show volume in Docker too. 
+  - remember that spring will pickup and config files from config/ folder by def
+
+**Run our app and the Postgresql container**
 
 - `sudo docker-compose -f docker-compose.yml up`
-  - make sure you have build your own image before running the above ie: `docker build -t melissapalmer/docker2helm:latest .`
+  - make sure you have build your own image before running the above i.e: `docker build -t melissapalmer/docker2helm:latest .`
+
+Again go to http://localhost:8080/hello to see a hello message, note that the IP address will be different. And your will see the message strings include 'from PG' indicating that we are querying from the postgres DB in docker network and not the h2 in memory DB.
+
+You can also checkout adminer at: http://localhost:8081/
 
 sudo docker system prune --volumes
 
@@ -144,13 +218,9 @@ Steps
 - `watch kubectl get services`
 - `watch kubectl get pvc`
 
-# 06-helm parent chart
+# 05-helm parent chart
 
-# Available Endpoints on the app include: 
-
-- http://localhost:8080/hello
-- http://localhost:8080/actuator
-- http://localhost:8080/actuator/health
+- 
 
 As usual, the source code for this blog is on [GitHub](https://github.com/melissapalmer/basic-java-app-2-helm)
 
