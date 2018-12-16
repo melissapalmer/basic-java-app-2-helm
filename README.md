@@ -1,23 +1,72 @@
-# docker-2-helm
+# Dockerizing a Spring Boot Application
+
+In this post I will go from a basic Spring Boot application running locally on your own PC to 
+
+
+
+running via standard Java command to deploying it into a Kubernetes cluster using Helm package manager. 
+
+
+
+- [Docker](https://www.docker.com/) 
+- [Kubernetes](https://kubernetes.io/) (commonly known as K8s) is an open-source container-orchestration system for automating deployment, scaling and management of containerized applications.
+
+- [Helm](https://docs.helm.sh/) is a package manager for K8s, it simplifies the installation of an application and its dependencies into a K8s cluster.
+
+
+
 Basic hello world rest api with /hello which queries a DB for greetings
 
-# 01-springboot-rest-api
+# 01-Create a Spring Boot Rest API
 
-**Prerequisites**
+For this step, I have assumed prior knowledge of Spring Boot, Maven and creating Restful APIs. If not checkout the following Spring.io guides: [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/), [Building REST services with Spring](https://spring.io/guides/tutorials/bookmarks/), [Accessing JPA Data with REST](https://spring.io/guides/gs/accessing-data-rest/)
 
-- Java
+You can also grab the code in my repo, on the 01-springboot-app branch at: 
+​	https://github.com/melissapalmer/basic-java-app-2-helm/tree/01-springboot-app
 
-This step creates a basic Spring Boot Restful API. Uses Maven to create the build artifact (jar) which we can then run and validate a couple of endpoints. 
+## Prerequisites
+
+**Your IDE**			I used STS 4.0
+**JDK 1.8 or later**	
+
+Using the Spring Boot Initializr create an application with the following dependencies: `Web, Actuator, JPA`
+
+You should get the scaffolding for a Standard Spring Boot app with your: `pom.xml, mvnw, application.yml .... and so on`
+
+Add the following dependencies to your pom.xml
+
+```xml
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>     
+    <scope>runtime</scope>       
+</dependency>
+```
+
+Create a basic controller to query the DB table greeting. 
 
 - Build Using `./mvnw clean package`
+- Run Using `java -jar target/docker-2-helm.jar` or `./mvnw spring-boot:run`
 
-- Run `java -jar target/docker-2-helm.jar` or `./mvnw spring-boot:run`
+Go to http://localhost:8080/hello to see a hello message. 
+We included the Spring actuator dependency in our pom.xml, so there are other endpoints available such as http://localhost:8080/actuator and http://localhost:8080/actuator/health
 
-# **02-springboot-2-docker**
+**So far we have done nothing with Docker**, however it is important to understand, that we've: 
+
+- We've built and run the application locally: **using a pre-installed version** of Java &/or Maven. 
+- If we were to hand this over to the an OPs team at this point: 
+  - we'd need to specify to them what version of Java is needed on the machine it'll be running on 
+
+# **02-Containerize It**
 
 **Prerequisites**
 
-- Docker
+- [Docker](https://docs.docker.com/v17.09/engine/installation/linux/docker-ce/ubuntu/)
 
 This step takes the Spring Boot application and creates a Docker image. 
 
@@ -30,9 +79,11 @@ This step takes the Spring Boot application and creates a Docker image.
 
 # 03-docker-compose
 
-**Prerequisites**
+## Prerequisites
 
-- Docker, Docker Compose
+**Docker Compose:** 1.17.1		Install Instructions: `sudo apt  install docker-compose`
+
+- Docker
 
 Introduce postgres db instead of using h2
 
@@ -43,9 +94,12 @@ sudo docker system prune --volumes
 
 # 04-helm
 
-**Prerequisites**
+## Prerequisites
 
-- minikube, helm
+**Minikube**: v0.30.0		Install Instructions at: https://github.com/kubernetes/minikube
+**VitualBox:** 				Install Instructions at: https://www.virtualbox.org/wiki/Linux_Downloads
+**Helm:** v2.11.0			Install Instructions at: https://docs.helm.sh/using_helm/#installing-helm
+**Kubectl**: v1.10.0			Install Instructions at: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 
 Steps
 
@@ -68,7 +122,7 @@ Steps
 - `watch kubectl get services`
 - `watch kubectl get pvc`
 
-06-helm parent chart
+# 06-helm parent chart
 
 # Available Endpoints on the app include: 
 
@@ -76,3 +130,9 @@ Steps
 - http://localhost:8080/actuator
 - http://localhost:8080/actuator/health
 
+As usual, the source code for this blog is on [GitHub](https://github.com/melissapalmer/basic-java-app-2-helm)
+
+# References
+
+- [Spring Boot with Docker](https://spring.io/guides/gs/spring-boot-docker/) from Spring.io
+- [Dockerize a Spring Boot application](https://thepracticaldeveloper.com/2017/12/11/dockerize-spring-boot/) from The Practical Developer
