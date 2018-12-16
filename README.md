@@ -21,40 +21,27 @@ Basic hello world rest api with /hello which queries a DB for greetings
 
 For this step, I have assumed prior knowledge of Spring Boot, Maven and creating Restful APIs. If not checkout the following Spring.io guides: [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/), [Building REST services with Spring](https://spring.io/guides/tutorials/bookmarks/), [Accessing JPA Data with REST](https://spring.io/guides/gs/accessing-data-rest/)
 
-You can also grab the code in my repo, on the 01-springboot-app branch at: 
-​	https://github.com/melissapalmer/basic-java-app-2-helm/tree/01-springboot-app
+You can also grab the code in my repo, on the 01-springboot-app branch in [GitHub](https://github.com/melissapalmer/basic-java-app-2-helm/tree/01-springboot-app)
 
-## Prerequisites
+**This application includes:** 
 
-**Your IDE**			I used STS 4.0
-**JDK 1.8 or later**	
+- An endpoint `/hello` that'll respond with various greetings text from a DB. 
+- Spring Actuator: which exposes health endpoints that will be used later on 
 
-Using the Spring Boot Initializr create an application with the following dependencies: `Web, Actuator, JPA`
+**Few things to notice**
 
-You should get the scaffolding for a Standard Spring Boot app with your: `pom.xml, mvnw, application.yml .... and so on`
+- application.yml includes the setting `spring.datasource.platform=h2` Spring in turn knows to use the  `data-h2.sql` file to initialise the h2 DB on start up. 
+- I have done this so that later, we can initialise the 'real' DB in other ways. It will help see how a 'real' DB is used vs. the H2 in memory DB.
 
-Add the following dependencies to your pom.xml
-
-```xml
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <scope>runtime</scope>
-</dependency>
-<dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>     
-    <scope>runtime</scope>       
-</dependency>
-```
-
-Create a basic controller to query the DB table greeting. 
+**Compiling and Running the app** 
 
 - Build Using `./mvnw clean package`
 - Run Using `java -jar target/docker-2-helm.jar` or `./mvnw spring-boot:run`
 
 Go to http://localhost:8080/hello to see a hello message. 
-We included the Spring actuator dependency in our pom.xml, so there are other endpoints available such as http://localhost:8080/actuator and http://localhost:8080/actuator/health
+Also test out the Spring Actuator endpoints: http://localhost:8080/actuator and http://localhost:8080/actuator/health
+
+
 
 **So far we have done nothing with Docker**, however it is important to understand, that we've: 
 
