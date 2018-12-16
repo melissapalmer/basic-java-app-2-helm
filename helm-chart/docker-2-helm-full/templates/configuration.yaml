@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "docker-2-helm.fullname" . }}-configmap
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app: {{ template "docker-2-helm.fullname" . }}
+data: 
+  application.yml: |-
+    spring:
+      datasource: #value: "jdbc:postgresql://{{ template "postgresql.hostname" . }}:{{- .Values.postgresql.service.port -}}/{{- .Values.postgresql.postgresDatabase -}}"
+        #url: {{ .Values.configuration.spring.datasource.url }}
+        url: "jdbc:postgresql://{{ template "postgresql.hostname" . }}:{{- .Values.postgresql.service.port -}}/{{- .Values.postgresql.postgresqlDatabase -}}"
+        username: {{ .Values.configuration.spring.datasource.username }}
+        password: {{ .Values.configuration.spring.datasource.password }}
+        platform: {{ .Values.configuration.spring.datasource.platform }}
+      jpa:
+        show-sql: {{ .Values.configuration.spring.jpa.showsql }}
+        generate-ddl: {{ .Values.configuration.spring.jpa.generateddl }}
+        hibernate.ddl-auto: {{ .Values.configuration.spring.jpa.hibernateddlauto }}

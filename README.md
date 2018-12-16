@@ -385,25 +385,65 @@ Customised the `deployment.yaml` to include this ConfiMap as a volumeMounts and 
   - `helm install --name docker-2-helm ./helm-chart/docker-2-helm`
 
 
-
-
 **Now go to** http://docker-2-helm.local/hello to see a hello message, note that the IP address will be different. And your will see the message strings include 'from Helm PG' indicating that we are querying from the postgres DB on k8s cluster and not the h2 in memory DB.
 
 We cannot use localhost anymore as the container is running inside of our k8s cluster. Which has an ingress to expose the container. 
 
-
-
-TODO: 
-
-- livelinets with a
-
-
-
 # 05-helm parent chart
 
-- 
+Above we ran two separate helm charts, using two different commands. One of the features of Helm is to be able to specify the dependant applications: 
 
-As usual, the source code for this blog is on [GitHub](https://github.com/melissapalmer/basic-java-app-2-helm)
+**To do this** (an example is under the helm-chart/docker-2-helm-full/ folder in my GitHub repo)
+
+- Add a `requirements.yaml` which includes a list of dependencies as follows: 
+
+  ```yaml
+  dependencies:
+    - name: postgresql
+      version: 3.1.3
+      repository:  "@stable"
+  ```
+
+Then include the postgresql chart values into your own values.yaml file: under the postgresql flag eg: 
+
+```yaml
+#override settings for the postgresql chart
+postgresql:
+  postgresqlUsername: postgresHelm
+  postgresqlPassword: postgresHelm
+  postgresqlDatabase: postgresHelmDB
+  initdbScripts:
+    db-init.sql: |
+      create sequence hibernate_sequence start with 1 increment by 1;
+      create table greeting (id bigint not null, say varchar(255), primary key (id));
+      insert into greeting(id,say) values(1,'Hello from parent Helm PG');
+      insert into greeting(id,say) values(2,'Hi from parent Helm PG');
+      insert into greeting(id,say) values(3,'Howdy! from parent Helm PG');
+      insert into greeting(id,say) values(4,'Howdy, Howdy! from parent Helm PG');
+```
+
+I also updated the chart a little: Instead of "hard-coding" the host name for DB URL for our app. I defined a variable in helm chart _helpers.tpl for the postgres setting
+
+```go
+{{- define "postgresql.hostname" -}}
+{{- printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+```
+
+Then in the configuration.yaml we can use this template value as follows:
+
+```go
+url: "jdbc:postgresql://{{ template "postgresql.hostname" . }}:{{- .Values.postgresql.service.port -}}/{{- .Values.postgresql.postgresqlDatabase -}}"
+```
+
+**To install this chart**
+
+- You will first need to run `helm dependency update ./helm-chart/docker-2-helm-full/`
+- Then you can install the chart using `helm install --name docker-2-helm ./helm-chart/docker-2-helm-full/`
+
+
+
+**As usual, the source code for this blog is on** [GitHub](https://github.com/melissapalmer/basic-java-app-2-helm)
 
 # References
 
