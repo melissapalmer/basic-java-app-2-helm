@@ -4,13 +4,12 @@ In this post I create a greeting RESTFul API with Spring, that queries a DB for 
 
 Thank you to **The Practical Developer** as is post at: https://thepracticaldeveloper.com/2017/12/11/dockerize-spring-boot/ allot of this is based off of what he taught is there. 
 
-**I go through the following technology stack, during this post:**
+**I go through the following core technology stack, during this post:**
 
 - [Spring](https://spring.io/) is an application framework and inversion of control container for the Java platform.
-- [Docker](https://www.docker.com/)  is used to run software called "containers". Containers are isolated from each other and bundle their own application, tools, libraries and configuration files.
+- [Docker](https://www.docker.com/)  is the container technology that allows you to containerise your applications.
 - [Docker Compose](https://docs.docker.com/compose/) is a tool for defining and running multi-container applications. 
-- [Kubernetes](https://kubernetes.io/) (commonly known as K8s) is an open-source container-orchestration system for automating deployment, scaling and management of containerized applications.
-
+- [Kubernetes](https://kubernetes.io/) (commonly known as K8s) is an open-source container-orchestration system for automating deployment, scaling and management of containerised applications.
 - [Helm](https://docs.helm.sh/) is a package manager for K8s, it simplifies the installation of an application and its dependencies into a K8s cluster.
 
 # 01-Create a Spring Boot Rest API
@@ -191,7 +190,16 @@ To cleanup and stop all containers created by the above you can run
 - `docker-compose down` to stop all the containers
 - this does not remove any volumes, to do so you would need to run `docker system prune --volumes`
 
-# 04-helm
+**AT THIS POINT: .... we have now** 
+
+- Run our application and dependant applications using docker-compose
+- however docker-compose only runs the containers on one host. If larger production environment this may not be sufficient. 
+
+# 04-k8s & helm
+
+Using docker-compose you can scale up and run multiple container instances of the same image. *However*: these containers are all started on the **same** host. Whereas kubenetes is a container orchestration tool for running and connecting containers on **multiple** hosts. In this next step I run my Spring Boot app in a container on K8s cluster, using Minikube. 
+
+K8s has some great getting started tutorials at: https://kubernetes.io/docs/user-journeys/users/application-developer/foundational/ 
 
 ## Prerequisites
 
@@ -200,26 +208,196 @@ To cleanup and stop all containers created by the above you can run
 **Helm:** v2.11.0			Install Instructions at: https://docs.helm.sh/using_helm/#installing-helm
 **Kubectl**: v1.10.0			Install Instructions at: https://kubernetes.io/docs/tasks/tools/install-kubectl/
 
-Steps
+**minikube**: is a tool that makes it easy to run Kubernetes locally.
+**kubectl**: is a command line tool for communicating with the k8s API server. 
 
-- ```
-  helm init
-  ```
 
-- `helm create docker-2-helm`
 
-  - customise the chart to include configuration.yrml and .. add volumn to deployment
+First we need to get a K8s cluster running, do this by running the following command: 
+​	`minikube start --cpus 4 --memory 8192`
+this starts a VM on VirtualBox with 4 CPUs and 8GB memory and will run "a simple, single-node k8s cluster. This cluster is fully functioning and contains all core Kubernetes components." Minikube also includes a Docker on this VM. 
 
-- helm install --name docker-2-helm ./helm-chart/docker-2-helm
-
-- hosts file entry
-
-- https://github.com/helm/charts/tree/master/stable/postgresql
+To watch what is happening on the k8s cluster, use the following commands. 
 
 - `watch kubectl get pods`
 - `watch kubectl get ingresses`
 - `watch kubectl get services`
 - `watch kubectl get pvc`
+
+I use Terminator  terminal emulators which allows multiple terminals in one window, as below: 
+
+​	to install Teminator 	`sudo apt-get install terminator`
+
+![](TerminatorWindows.png)
+
+
+
+Helm has two parts, a client, helm, and a server, tiller. To install Tiller onto your k8s cluster you need to run
+​	`helm init`
+
+**Remember when we used the docker-compose above, we included a Postgres DB.** 
+
+We want to get a postgres DB running in our k8s cluster. Helm already has a postgres chart that we can use.. and setup to our own needs by overriding settings applicable to us. The repo for Helm Stable charts is at: https://github.com/helm/charts/tree/master/stable/postgresql 
+
+Within the repo under the scripts folder, i have created install scripts for this helm chart. Basically what they are doing is: 
+
+- I took a copy of the values.yml from the above mentioned repo. and customised it so that I could set the values for: postgresqlUsername, postgresqlPassword and postgresqlDatabase as well as the initdbScripts
+- FYI: at the time of writing this there were a couple issues with the Helm Chart initdbScripts field. And you have to include the script within values file is could not be in its own file. 
+- So that we can see the data coming from this postgres instance on the k8s cluster, I initialised the DB with the following: 
+
+```yaml
+initdbScripts:
+  db-init.sql: |
+    create sequence hibernate_sequence start with 1 increment by 1;
+    create table greeting (id bigint not null, say varchar(255), primary key (id));
+    insert into greeting(id,say) values(1,'Hello from Helm PG');
+    insert into greeting(id,say) values(2,'Hi from Helm PG');
+    insert into greeting(id,say) values(3,'Howdy! from Helm PG');
+    insert into greeting(id,say) values(4,'Howdy, Howdy! from Helm PG');
+```
+
+**To install the postgres Helm Chart you can run::**
+
+​	`helm install --name postgres --replace -f postgres-values.yaml stable/postgresql`
+
+this installs the chart, giving it a name of postgres and replacing the values with our values from postgres-values.yaml
+
+To log into this database and see our greeting table used the command suggested by the helm chart output: 
+
+`export POSTGRESQL_PASSWORD=$(kubectl get secret --namespace default postgres-postgresql -o jsonpath="{.data.postgresql-password}" | base64 --decode)`
+
+and then 
+
+`kubectl run postgres-postgresql-client --rm --tty -i --restart='Never' --namespace default --image bitnami/postgresql --env="PGPASSWORD=$POSTGRESQL_PASSWORD" --command -- psql --host postgres-postgresql -U postgresHelm -d postgresHelmDB`
+
+You'll be logged into the DB and can run commands like: 
+
+`select * from greeting;`
+
+**Now we can create a helm chart for our application by running:** 
+​	`helm create docker-2-helm`
+this will create a basic example chart for us that will need to be customised for our application. 
+
+```
+docker-2-helm
+-- templates
+	-- deployment.yaml
+	-- _helpers.tpl
+	-- ingress.yaml
+	-- NOTES.txt
+	-- service.yaml
+-- Chart.yaml
+-- values.yaml
+```
+
+Each file under the templates folder maps to a component within k8s and is templated out using Go Templates. The values.yaml file is used to specify all config parameters that can be used against this charts templates. Usually people also a README.md to their chart folder which includes details on these settings and how to use them. 
+
+You now have to customise this chart for your own application, start with the values.yaml
+
+- match the repository image settings to your own image we have been creating
+- enable the ingress (so that we can get to our app from the host machine), set reasonable host for: `chart-example.local`
+- and include any config which will be specific to your own application
+
+Below is the values.yaml for my application (I've only included those attributes I changed, for full version check on my GitHub repo):
+
+```
+image:
+  repository: melissapalmer/docker2helm
+  tag: latest
+  pullPolicy: IfNotPresent
+  
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  path: /
+  hosts:
+    - docker-2-helm.local
+
+#Spring related config for my own application, to pass through via helm chart
+configuration:
+  spring:
+    datasource:
+      url: jdbc:postgresql://postgres-postgresql:5432/postgresHelmDB
+      username: postgresHelm
+      password: postgresHelm
+      platform: postgresql
+    jpa:
+      showsql: true
+      generateddl: false
+      hibernateddlauto: validate
+```
+
+We want to mount our own config to the Spring Boot container. To do this we need to change the `deployment.yaml` to include a mounted volume for our config. First create a configuration.yaml file in the templates folder with the following::
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "docker-2-helm.fullname" . }}-configmap
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    app: {{ template "docker-2-helm.fullname" . }}
+data: 
+  application.yml: |-
+    spring:
+      datasource:
+        url: {{ .Values.configuration.spring.datasource.url }}
+        username: {{ .Values.configuration.spring.datasource.username }}
+        password: {{ .Values.configuration.spring.datasource.password }}
+        platform: {{ .Values.configuration.spring.datasource.platform }}
+      jpa:
+        show-sql: {{ .Values.configuration.spring.jpa.showsql }}
+        generate-ddl: {{ .Values.configuration.spring.jpa.generateddl }}
+        hibernate.ddl-auto: {{ .Values.configuration.spring.jpa.hibernateddlauto }}
+```
+
+This creates a ConfigMap for k8s, and pushes in our application.yml that will later be used by our Spring Boot application. See the `.Values.configuration.spring.datasource.url` is matching the values.yaml where we added our Spring related settings. 
+
+Customised the `deployment.yaml` to include this ConfiMap as a volumeMounts and volumes as below: (again not the full file see GitHub repo for this)
+
+```yaml
+...       
+          volumeMounts:
+          - name: configuration-volume
+            # Note: 'app.jar' currently resides within the root folder.
+            mountPath: /config
+...
+	  volumes:
+      - name: configuration-volume
+        configMap:
+          name: {{ template "docker-2-helm.fullname" . }}-configmap
+```
+
+
+**Now to actually run this Helm Chart and use the URLs of our application you need to do the following:** 
+
+- include a host entry in your hosts file (edit /etc/hosts) for `docker-2-helm.local` the name given to the k8s ingress to your application in the values.yaml of helm chart
+  - The IP for this host, is the IP of your minikube cluster. To get this run `minikube ip`
+- Install your app, via helm to the k8s cluster using from the root directory
+  - `helm install --name docker-2-helm ./helm-chart/docker-2-helm`
+
+
+
+
+**Now go to** http://docker-2-helm.local/hello to see a hello message, note that the IP address will be different. And your will see the message strings include 'from Helm PG' indicating that we are querying from the postgres DB on k8s cluster and not the h2 in memory DB.
+
+We cannot use localhost anymore as the container is running inside of our k8s cluster. Which has an ingress to expose the container. 
+
+
+
+TODO: 
+
+- livelinets with a
+
+
 
 # 05-helm parent chart
 
@@ -232,3 +410,4 @@ As usual, the source code for this blog is on [GitHub](https://github.com/meliss
 - [Spring Boot with Docker](https://spring.io/guides/gs/spring-boot-docker/) from Spring.io
 - [Dockerize a Spring Boot application](https://thepracticaldeveloper.com/2017/12/11/dockerize-spring-boot/) from The Practical Developer
 - [Building thin Docker images using multi-stage build for your java apps!](https://aboullaite.me/multi-stage-docker-java/) from Mohammed Aboullaite
+- [What's the difference between docker compose and kubernetes?](https://stackoverflow.com/questions/47536536/whats-the-difference-between-docker-compose-and-kubernetes) from Stackoverflow
