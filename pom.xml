@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>docker-2-helm</artifactId>
+	<artifactId>basic-java-app-2-helm</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>docker-2-helm</name>
 	<description>Demo project for Spring Boot</description>
