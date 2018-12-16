@@ -370,7 +370,7 @@ Customised the `deployment.yaml` to include this ConfiMap as a volumeMounts and 
             # Note: 'app.jar' currently resides within the root folder.
             mountPath: /config
 ...
-	  volumes:
+          volumes:
       - name: configuration-volume
         configMap:
           name: {{ template "docker-2-helm.fullname" . }}-configmap
