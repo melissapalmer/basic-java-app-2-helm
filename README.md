@@ -186,7 +186,10 @@ Again go to http://localhost:8080/hello to see a hello message, note that the IP
 
 You can also checkout adminer at: http://localhost:8081/
 
-sudo docker system prune --volumes
+To cleanup and stop all containers created by the above you can run 
+
+- `docker-compose down` to stop all the containers
+- this does not remove any volumes, to do so you would need to run `docker system prune --volumes`
 
 # 04-helm
 
